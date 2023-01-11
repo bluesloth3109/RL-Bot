@@ -7,6 +7,8 @@ from util.boost_pad_tracker import BoostPadTracker
 from util.drive import steer_toward_target
 from util.sequence import Sequence, ControlStep
 from util.vec import Vec3
+from car_movements import begin_front_flip, begin_back_flip, begin_side_flip_left, begin_side_flip_right, begin_diagonal_flip_forwards_right, begin_diagonal_flip_forwards_left, begin_diagonal_flip_backwards_right, begin_diagonal_flip_backwards_left
+
 
 
 class MyBot(BaseAgent):
@@ -71,19 +73,3 @@ class MyBot(BaseAgent):
         # You can set more controls if you want, like controls.boost.
 
         return controls
-
-    def begin_front_flip(self, packet):
-        # Send some quickchat just for fun
-        self.send_quick_chat(team_only=False, quick_chat=QuickChatSelection.Information_IGotIt)
-
-        # Do a front flip. We will be committed to this for a few seconds and the bot will ignore other
-        # logic during that time because we are setting the active_sequence.
-        self.active_sequence = Sequence([
-            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
-            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False)),
-            ControlStep(duration=0.2, controls=SimpleControllerState(jump=True, pitch=-1)),
-            ControlStep(duration=0.8, controls=SimpleControllerState()),
-        ])
-
-        # Return the controls associated with the beginning of the sequence so we can start right away.
-        return self.active_sequence.tick(packet)
