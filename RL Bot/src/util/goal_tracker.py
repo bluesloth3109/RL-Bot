@@ -25,9 +25,9 @@ class GoalTracker():
 
 	def middle_of_goal(team):
 		if team == 0:
-			middle = Vec3(0, -5120, 642.775//2)
+			middle = Vec3(0, -5120, 642.775//2) #blue
 		elif team == 1:
-			middle = Vec3(0, 5120, 642.775//2)
+			middle = Vec3(0, 5120, 642.775//2) #orange
 		return middle
 
     
