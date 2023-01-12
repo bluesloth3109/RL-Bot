@@ -5,8 +5,6 @@ from util.sequence import Sequence, ControlStep
     
 class CarMovements:
     def __init__(self):
-        #happnin deeroy ya fat wank
-        #this init function inizialies the class, this is where u would fire the sequence shit.
         super().__init__(name, team, index)
         self.active_sequence: Sequence = None
         self.boost_pad_tracker = BoostPadTracker()
