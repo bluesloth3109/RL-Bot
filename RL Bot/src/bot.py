@@ -7,30 +7,27 @@ from util.boost_pad_tracker import BoostPadTracker
 from util.drive import steer_toward_target
 from util.sequence import Sequence, ControlStep
 from util.vec import Vec3
-from car_movements import begin_front_flip, begin_back_flip, begin_side_flip_left, begin_side_flip_right, begin_diagonal_flip_forwards_right, begin_diagonal_flip_forwards_left, begin_diagonal_flip_backwards_right, begin_diagonal_flip_backwards_left
+from util.car_movements import CarMovements
 
 
-
-class MyBot(BaseAgent):
+class MrNanner(BaseAgent):
 
     def __init__(self, name, team, index):
         super().__init__(name, team, index)
         self.active_sequence: Sequence = None
         self.boost_pad_tracker = BoostPadTracker()
-
+        self.car_movements = CarMovements()
     def initialize_agent(self):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
-
+        
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         """
         This function will be called by the framework many times per second. This is where you can
         see the motion of the ball, etc. and return controls to drive your car.
         """
-
         # Keep our boost pad info updated with which pads are currently active
         self.boost_pad_tracker.update_boost_status(packet)
-
         # This is good to keep at the beginning of get_output. It will allow you to continue
         # any sequences that you may have started during a previous call to get_output.
         if self.active_sequence is not None and not self.active_sequence.done:
@@ -65,8 +62,9 @@ class MyBot(BaseAgent):
 
         if 750 < car_velocity.length() < 800:
             # We'll do a front flip if the car is moving at a certain speed.
-            return self.begin_front_flip(packet)
+            return self.car_movements.begin_front_flip()
 
+        
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)
         controls.throttle = 1.0
