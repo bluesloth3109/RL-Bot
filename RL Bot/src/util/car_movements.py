@@ -5,7 +5,7 @@ from util.sequence import Sequence, ControlStep
     
 class CarMovements:
     def __init__(self):
-        #happnin deeroy ya fat wank
+        #happnin deeroy ya fat wank,
         #this init function inizialies the class, this is where u would fire the sequence shit. 
     
     def begin_front_flip(self, packet = GameTickPacket):
