@@ -7,7 +7,7 @@ from util.boost_pad_tracker import BoostPadTracker
 from util.drive import steer_toward_target
 from util.sequence import Sequence, ControlStep
 from util.vec import Vec3
-from util.car_movements import CarMovements
+from util.car_movements import *
 
 
 class MrNanner(BaseAgent):
@@ -16,7 +16,6 @@ class MrNanner(BaseAgent):
         super().__init__(name, team, index)
         self.active_sequence: Sequence = None
         self.boost_pad_tracker = BoostPadTracker()
-        self.car_movements = CarMovements()
     def initialize_agent(self):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
@@ -60,11 +59,14 @@ class MrNanner(BaseAgent):
         self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
 
-        if 750 < car_velocity.length() < 800:
-            # We'll do a front flip if the car is moving at a certain speed.
-            return self.car_movements.begin_front_flip()
 
-        
+
+ 
+
+        if 750 < car_velocity.length() < 800:
+                 #We'll do a front flip if the car is moving at a certain speed.
+            return begin_front_flip(packet)
+
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)
         controls.throttle = 1.0
