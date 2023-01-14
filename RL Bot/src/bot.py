@@ -1,13 +1,12 @@
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
-from rlbot.messages.flat.QuickChatSelection import QuickChatSelection
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 
 from util.ball_prediction_analysis import find_slice_at_time
 from util.boost_pad_tracker import BoostPadTracker
 from util.drive import steer_toward_target
-from util.sequence import Sequence, ControlStep
+from util.sequence import Sequence
 from util.vec import Vec3
-from util.car_movements import *
+from util.car_movements import begin_back_flip
 
 
 class MrNanner(BaseAgent):
@@ -39,10 +38,8 @@ class MrNanner(BaseAgent):
         car_location = Vec3(my_car.physics.location)
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
-
         # By default we will chase the ball, but target_location can be changed later
         target_location = ball_location
-
         if car_location.dist(ball_location) > 1500:
             # We're far away from the ball, let's try to lead it a little bit
             ball_prediction = self.get_ball_prediction_struct()  # This can predict bounces, etc
@@ -58,14 +55,10 @@ class MrNanner(BaseAgent):
         self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
         self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
-
-
-
- 
-
+        #self.renderer.draw_line_3d(car_location, enemygoal , self.renderer.red())
+        
         if 750 < car_velocity.length() < 800:
-                 #We'll do a front flip if the car is moving at a certain speed.
-            return begin_front_flip(packet)
+            return begin_back_flip(packet)
 
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)
