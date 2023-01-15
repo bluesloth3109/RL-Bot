@@ -63,7 +63,7 @@ class WeeNanner(BaseAgent):
 
         if 750 < car_velocity.length() < 800:
             # We'll do a front flip if the car is moving at a certain speed.
-            return self.begin_front_flip(packet)
+            return self.begin_half_flip(packet)
 
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)
@@ -87,13 +87,14 @@ class WeeNanner(BaseAgent):
         return self.active_sequence.tick(packet)
     def begin_half_flip(self, packet):
         self.active_sequence = Sequence([
-            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
-            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False)),
-            ControlStep(duration=0.1, controls=SimpleControllerState(jump=True, pitch=1)), #backflip
-            ControlStep(duration=0.2, controls=SimpleControllerState(jump=False, pitch=-1)), #cancel flip
-            
+            ControlStep(duration=0.12, controls=SimpleControllerState(jump=True)),
+            ControlStep(duration=0.0001, controls=SimpleControllerState(jump=False)),
+            ControlStep(duration=0.09, controls=SimpleControllerState(jump=True, pitch=1)), #backflip
+            ControlStep(duration=0.4, controls=SimpleControllerState(jump=False, pitch=-1)), #cancel flip
             #Adjust duration so it lands well
-            ControlStep(duration=0.2, controls=SimpleControllerState(jump=False, roll=1)), #airrollround
+            ControlStep(duration=1.4, controls=SimpleControllerState(jump=False, roll=1, boost=True)), #airrollround
+            ControlStep(duration=0.5, controls=SimpleControllerState(boost=True)),
+
             ControlStep(duration=0.8, controls=SimpleControllerState()),
 
         ])
