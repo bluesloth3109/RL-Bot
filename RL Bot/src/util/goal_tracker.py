@@ -1,9 +1,9 @@
 from rlbot.utils.structures.game_data_struct import GameTickPacket, FieldInfoPacket
-from vec import Vec3
+from util.vec import Vec3
 
 
 	
-class GoalTracker():
+class GoalTracker:
 #Returns distance from player to goal as a vector
 	def get_goal_distance(packet: FieldInfoPacket, team, playerlocation):
 		info = packet.get_field_info()
@@ -15,7 +15,7 @@ class GoalTracker():
 		return distance
 
 	#Returns direction from player to goal as a vector
-	def get_goal_direction(packet: GameTickPacket, team, playerdirection):
+	def get_goal_direction(packet: FieldInfoPacket, team, playerdirection):
 		info = packet.get_field_info()
 		for i in range(info.num_goals):
 			goal = info.goals[i]
@@ -30,4 +30,3 @@ class GoalTracker():
 		elif team == 1:
 			middle = Vec3(0, 5120, 642.775//2) #orange
 		return middle
-

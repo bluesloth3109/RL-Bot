@@ -1,9 +1,8 @@
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
-from util.sequence import Sequence, ControlStep
-  
-#deeroy i think u might need to add the sequence initlize shit in, cause the flip isnt getting called, might need to have a play around but this works.
-def begin_front_flip(packet):
+from sequence import Sequence, ControlStep
+
+def begin_front_flip(packet=GameTickPacket):
     active_sequence = Sequence([
         ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
         ControlStep(duration=0.05, controls=SimpleControllerState(jump=False)),
