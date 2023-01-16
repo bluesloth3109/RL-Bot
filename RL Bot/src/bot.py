@@ -47,7 +47,7 @@ class WeeNanner(BaseAgent):
         car_location = Vec3(my_car.physics.location)
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
-        distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False)
+        distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False) + 92.75
             
         
         # By default we will chase the ball, but target_location can be changed later
@@ -65,9 +65,11 @@ class WeeNanner(BaseAgent):
 
         # Draw some things to help understand what the bot is thinking
         self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
-        self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
+        self.renderer.draw_string_2d(50, 50, 1, 1,f'Player Co-ords:{car_location}', self.renderer.white())
+        self.renderer.draw_string_2d(50, 70, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
+        self.renderer.draw_string_2d(50,90, 1, 1, f'Dist. to ball: {distance_to_ball:.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
-        
+
         self.renderer.draw_line_3d(car_location, foe_goal, self.renderer.orange())
         self.renderer.draw_line_3d(car_location, my_goal, self.renderer.blue())
         
@@ -89,7 +91,7 @@ class WeeNanner(BaseAgent):
                 controls.boost = True
                 if 550 < car_velocity.length() < 650:
                     return self.begin_speed_flip(packet)
-                if distance_to_ball < 550:
+                if distance_to_ball < 460:
                     controls.boost = False
                     return self.begin_front_flip(packet)
 
