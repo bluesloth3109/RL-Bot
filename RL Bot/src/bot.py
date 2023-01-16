@@ -1,6 +1,6 @@
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.messages.flat.QuickChatSelection import QuickChatSelection
-from rlbot.utils.structures.game_data_struct import GameTickPacket
+from rlbot.utils.structures.game_data_struct import GameTickPacket,FieldInfoPacket
 
 from util.ball_prediction_analysis import find_slice_at_time
 from util.boost_pad_tracker import BoostPadTracker
@@ -15,11 +15,9 @@ class WeeNanner(BaseAgent):
         super().__init__(name, team, index)
         self.active_sequence: Sequence = None
         self.boost_pad_tracker = BoostPadTracker()
-
     def initialize_agent(self):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
-
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         """
         This function will be called by the framework many times per second. This is where you can
@@ -38,13 +36,22 @@ class WeeNanner(BaseAgent):
 
         # Gather some information about our car and the ball
         my_car = packet.game_cars[self.index]
+        # Check Vector of our teams goal
+        my_team = my_car.team
+        if my_team == 0:
+            my_goal = Vec3(0, -5120, 642.775//2)
+            foe_goal =Vec3(0, 5120, 642.775//2)
+        elif my_team == 1:
+            my_goal =Vec3(0, 5120, 642.775//2)
+            foe_goal = Vec3(0, -5120, 642.775//2)
         car_location = Vec3(my_car.physics.location)
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
-
+        distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False)
+            
+        
         # By default we will chase the ball, but target_location can be changed later
         target_location = ball_location
-
         if car_location.dist(ball_location) > 1500:
             # We're far away from the ball, let's try to lead it a little bit
             ball_prediction = self.get_ball_prediction_struct()  # This can predict bounces, etc
@@ -60,7 +67,10 @@ class WeeNanner(BaseAgent):
         self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
         self.renderer.draw_string_3d(car_location, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
-
+        
+        self.renderer.draw_line_3d(car_location, foe_goal, self.renderer.orange())
+        self.renderer.draw_line_3d(car_location, my_goal, self.renderer.blue())
+        
         if 750 < car_velocity.length() < 800:
             return self.begin_front_flip(packet)
 
@@ -79,13 +89,34 @@ class WeeNanner(BaseAgent):
                 controls.boost = True
                 if 550 < car_velocity.length() < 650:
                     return self.begin_speed_flip(packet)
-                if Vec3.dist(car_location, ball_location) < 550:
+                if distance_to_ball < 550:
                     controls.boost = False
                     return self.begin_front_flip(packet)
 
         
         return controls #KEEP AT END OF GET_OUTPUT FUNCTION
-
+    	
+        
+    def get_target_distance(self, playerlocation, target, flat):
+        #Returns distance from player to target as a vector, can be a flat 2d vector
+            distance = Vec3.dist(playerlocation, target)
+            if flat == True:
+                flatdistance1 = Vec3.flat(playerlocation)
+                flatdistance2 = Vec3.flat(target)
+                flatdistanceval = Vec3.dist(flatdistance1, flatdistance2)
+                return flatdistanceval
+            else:
+                return distance
+    def get_target_direction(self, playerlocation, target, flat):
+        #Returns direction from player to target as a vector, can be a flat 2d vector
+            direction = Vec3.ang_to(playerlocation, target)
+            if flat == True:
+                flatdirection1 = Vec3.flat(playerlocation)
+                flatdirection2 = Vec3.flat(target)
+                flatdirectionang = Vec3.ang_to(flatdirection1, flatdirection2)
+                return flatdirectionang
+            else:
+                return direction
 
     def begin_front_flip(self, packet):
         # Send some quickchat just for fun
