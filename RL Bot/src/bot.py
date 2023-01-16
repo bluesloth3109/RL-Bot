@@ -62,15 +62,30 @@ class WeeNanner(BaseAgent):
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
 
         if 750 < car_velocity.length() < 800:
+            return self.begin_front_flip(packet)
+
+      
+        #if 750 < car_velocity.length() < 800:
             # We'll do a front flip if the car is moving at a certain speed.
-            return self.begin_half_flip(packet)
+            #return self.begin_speed_flip(packet)
 
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)
         controls.throttle = 1.0
-        # You can set more controls if you want, like controls.boost.
+        
+        #INITIATE KICKOFF
+        if packet.game_info.is_round_active:
+            if packet.game_info.is_kickoff_pause:
+                controls.boost = True
+                if 550 < car_velocity.length() < 650:
+                    return self.begin_speed_flip(packet)
+                if Vec3.dist(car_location, ball_location) < 550:
+                    controls.boost = False
+                    return self.begin_front_flip(packet)
 
-        return controls
+        
+        return controls #KEEP AT END OF GET_OUTPUT FUNCTION
+
 
     def begin_front_flip(self, packet):
         # Send some quickchat just for fun
@@ -98,4 +113,15 @@ class WeeNanner(BaseAgent):
             ControlStep(duration=0.8, controls=SimpleControllerState()),
 
         ])
+        return self.active_sequence.tick(packet)
+    def begin_speed_flip(self, packet):
+        self.active_sequence = Sequence([
+            ControlStep(duration=0.15, controls=SimpleControllerState(steer=1, boost=True)),
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True, boost=True)),
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=False, boost=True, handbrake=True)),
+            ControlStep(duration=0.2, controls=SimpleControllerState(jump=True, roll=-1, boost=True, handbrake=True)),
+            ControlStep(duration=0.15, controls=SimpleControllerState(jump=False, boost=True, handbrake=True)),
+            ControlStep(duration=0.40, controls=SimpleControllerState(boost=True, handbrake=True, yaw=-1)),
+        ])
+
         return self.active_sequence.tick(packet)

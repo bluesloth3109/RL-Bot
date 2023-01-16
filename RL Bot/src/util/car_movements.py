@@ -102,3 +102,16 @@ def begin_halfflip(self, packet=GameTickPacket):
 
     ])
     return self.active_sequence.tick(packet)
+
+    def begin_speed_flipwrong(self, packet):
+        self.active_sequence = Sequence([
+            ControlStep(duration=0.05, controls=SimpleControllerState(jump=True)),
+            ControlStep(duration=0.001, controls=SimpleControllerState(jump=False)),
+            ControlStep(duration=0.2, controls=SimpleControllerState(jump=True, roll=-1, pitch = -1, boost=True)),
+            ControlStep(duration=0.2, controls=SimpleControllerState(jump=False, roll=1, pitch = 1, boost=True ,handbrake=True)),
+
+            ControlStep(duration=0.8, controls=SimpleControllerState()),
+        ])
+
+        # Return the controls associated with the beginning of the sequence so we can start right away.
+        return self.active_sequence.tick(packet)
