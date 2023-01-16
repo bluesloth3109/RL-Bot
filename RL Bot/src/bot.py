@@ -19,10 +19,6 @@ class WeeNanner(BaseAgent):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
-        """
-        This function will be called by the framework many times per second. This is where you can
-        see the motion of the ball, etc. and return controls to drive your car.
-        """
 
         # Keep our boost pad info updated with which pads are currently active
         self.boost_pad_tracker.update_boost_status(packet)
@@ -47,7 +43,8 @@ class WeeNanner(BaseAgent):
         car_location = Vec3(my_car.physics.location)
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
-        distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False) + 92.75
+        distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False) - 92.75
+        distance_to_ball_flat = self.get_target_distance(car_location, ball_location, flat=True) - 92.75
             
         
         # By default we will chase the ball, but target_location can be changed later
@@ -75,11 +72,6 @@ class WeeNanner(BaseAgent):
         
         if 750 < car_velocity.length() < 800:
             return self.begin_front_flip(packet)
-
-      
-        #if 750 < car_velocity.length() < 800:
-            # We'll do a front flip if the car is moving at a certain speed.
-            #return self.begin_speed_flip(packet)
 
         controls = SimpleControllerState()
         controls.steer = steer_toward_target(my_car, target_location)

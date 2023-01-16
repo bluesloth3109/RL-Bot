@@ -7,11 +7,6 @@ from util.vec import Vec3
 
 
 def limit_to_safe_range(value: float) -> float:
-    """
-    Controls like throttle, steer, pitch, yaw, and roll need to be in the range of -1 to 1.
-    This will ensure your number is in that range. Something like 0.45 will stay as it is,
-    but a value of -5.6 would be changed to -1.
-    """
     if value < -1:
         return -1
     if value > 1:
