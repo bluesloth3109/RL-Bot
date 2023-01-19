@@ -16,16 +16,15 @@ class WeeNanner(BaseAgent):
         super().__init__(name, team, index)
         self.active_sequence: Sequence = None
         self.boost_pad_tracker = BoostPadTracker()
-
+        initial_gametime = 0
     def initialize_agent(self):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
-        x = []
+        self.initial_gametime = 0
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         # Keep our boost pad info updated with which pads are currently active
         self.boost_pad_tracker.update_boost_status(packet)
-
         # This is good to keep at the beginning of get_output. It will allow you to continue
         # any sequences that you may have started during a previous call to get_output.
         if self.active_sequence is not None and not self.active_sequence.done:
@@ -33,8 +32,9 @@ class WeeNanner(BaseAgent):
             if controls is not None:
                 return controls
 
-        # Gather some information about our car and the ball
+        #get car
         my_car = packet.game_cars[self.index]
+        
         # Check Vector of our teams goal
         my_team = my_car.team
         if my_team == 0:
@@ -43,15 +43,17 @@ class WeeNanner(BaseAgent):
         elif my_team == 1:
             my_goal =Vec3(0, 5120, 642.775//2)
             foe_goal = Vec3(0, -5120, 642.775//2)
+        
+        #variables
         car_location = Vec3(my_car.physics.location)
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
         distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False) - 92.75
         distance_to_ball_flat = self.get_target_distance(car_location, ball_location, flat=True) - 92.75
+        curr_gametime = int(packet.game_info.seconds_elapsed)
 
-        # some code to add every second to x
-            
-        # By default we will chase the ball, but target_location can be changed later
+
+        # By default we will chase the ball
         target_location = ball_location
         if car_location.dist(ball_location) > 1500:
             # self.attack_from_far(packet)
@@ -85,11 +87,14 @@ class WeeNanner(BaseAgent):
         if packet.game_cars[self.index].boost != 0:
             controls.boost = True
 
+        #FRONT FLIP COOLDOWN TIMER
         elif car_location.dist(ball_location) <= 460:
-            self.begin_front_flip(packet)
-            # 
-            
-            self.start_timer(packet)
+            if curr_gametime - self.initial_gametime >= 4 :
+               self.begin_front_flip(packet)
+               self.initial_gametime = curr_gametime
+            else:
+               pass
+        print(self.initial_gametime, curr_gametime)
 
         #INITIATE KICKOFF
         if packet.game_info.is_round_active:
@@ -115,7 +120,6 @@ class WeeNanner(BaseAgent):
                 return flatdistanceval
             else:
                 return distance
-
     def get_target_direction(self, playerlocation, target, flat):
         #Returns direction from player to target as a vector, can be a flat 2d vector
             direction = Vec3.ang_to(playerlocation, target)
@@ -140,8 +144,7 @@ class WeeNanner(BaseAgent):
         ])
 
         # Return the controls associated with the beginning of the sequence so we can start right away.
-        return self.active_sequence.tick(packet)
-    
+        return self.active_sequence.tick(packet)  
     def begin_half_flip(self, packet):
         self.active_sequence = Sequence([
             ControlStep(duration=0.12, controls=SimpleControllerState(jump=True)),
@@ -156,7 +159,6 @@ class WeeNanner(BaseAgent):
 
         ])
         return self.active_sequence.tick(packet)
-
     def begin_speed_flip(self, packet):  
         self.active_sequence = Sequence([
             ControlStep(duration=0.15, controls=SimpleControllerState(steer=1, boost=True)),
@@ -168,17 +170,3 @@ class WeeNanner(BaseAgent):
         ])
 
         return self.active_sequence.tick(packet)
-
-    def start_timer(self, packet):
-        # Starts 2s timer to prevent flip spam
-        # Sets starttime to current time
-        starttime = time.time()
-        my_car = packet.game_cars[self.index]
-        ball_location = Vec3(packet.game_ball.physics.location)
-
-        # While timer is not finished
-        while time.time() != starttime + 2:
-            controls = SimpleControllerState()
-            controls.steer = steer_toward_target(my_car, ball_location)
-            controls.throttle = 1.0
-        
