@@ -16,12 +16,10 @@ class WeeNanner(BaseAgent):
         super().__init__(name, team, index)
         self.active_sequence: Sequence = None
         self.boost_pad_tracker = BoostPadTracker()
-        initial_gametime = 0
     def initialize_agent(self):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
         self.initial_gametime = 0
-
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         # Keep our boost pad info updated with which pads are currently active
         self.boost_pad_tracker.update_boost_status(packet)
@@ -51,6 +49,7 @@ class WeeNanner(BaseAgent):
         distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False) - 92.75
         distance_to_ball_flat = self.get_target_distance(car_location, ball_location, flat=True) - 92.75
         curr_gametime = int(packet.game_info.seconds_elapsed)
+        map_centre = Vec3(0, 0 ,0)
 
 
         # By default we will chase the ball
@@ -84,17 +83,9 @@ class WeeNanner(BaseAgent):
         controls.steer = steer_toward_target(my_car, target_location)
         controls.throttle = 1.0
 
+
         if packet.game_cars[self.index].boost != 0:
             controls.boost = True
-
-        #FRONT FLIP COOLDOWN TIMER
-        elif car_location.dist(ball_location) <= 460:
-            if curr_gametime - self.initial_gametime >= 4 :
-               self.begin_front_flip(packet)
-               self.initial_gametime = curr_gametime
-            else:
-               pass
-        print(self.initial_gametime, curr_gametime)
 
         #INITIATE KICKOFF
         if packet.game_info.is_round_active:
@@ -105,6 +96,23 @@ class WeeNanner(BaseAgent):
                 if distance_to_ball < 460:
                     controls.boost = False
                     return self.begin_front_flip(packet)
+        
+        #check if on wall, needs fixed dosent change target location to the cnetre, keeps staying on wall
+        if car_location[0] >= 4000 or car_location[0] <= -4000:
+            target_location = map_centre
+            print("onwall", curr_gametime)
+        elif car_location[1] >= 5080 or car_location[1] <= -5080:
+            target_location = map_centre
+            print("onwall", curr_gametime)
+        else:
+            target_location = ball_location
+
+        #FRONT FLIP COOLDOWN TIMER
+        if car_location.dist(ball_location) <= 460:
+            if curr_gametime - self.initial_gametime >= 4 :
+               self.begin_front_flip(packet)
+               self.initial_gametime = curr_gametime
+
 
         
         return controls #KEEP AT END OF GET_OUTPUT FUNCTION <-- DONT SHOUT AT ME ZEETO
