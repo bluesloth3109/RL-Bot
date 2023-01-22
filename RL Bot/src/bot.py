@@ -98,10 +98,7 @@ class WeeNanner(BaseAgent):
                     return self.begin_front_flip(packet)
         
         #check if on wall, needs fixed dosent change target location to the cnetre, keeps staying on wall
-        if car_location[0] >= 4000 or car_location[0] <= -4000:
-            target_location = map_centre
-            print("onwall", curr_gametime)
-        elif car_location[1] >= 5080 or car_location[1] <= -5080:
+        if self.on_wall(car_location) == True:
             target_location = map_centre
             print("onwall", curr_gametime)
         else:
@@ -138,6 +135,20 @@ class WeeNanner(BaseAgent):
                 return flatdirectionang
             else:
                 return direction
+    def on_wall(self, point):
+    #determines if a point is on the wall
+        point = Vec3(abs(point[0]),abs(point[1]),abs(point[2]))
+        if point[2] > 400:
+            if point[0] > 3600 and 4000 > point[1]:
+                return True
+            elif 900 < point[0] < 3000 and point[1] > 4900:
+                return True
+            elif point[0] > 2900 and point[1] > 3800 and 7500 < point[0] + point[1] < 8500:
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def begin_front_flip(self, packet):
 
