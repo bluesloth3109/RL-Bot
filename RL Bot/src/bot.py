@@ -20,7 +20,7 @@ class WeeNanner(BaseAgent):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
         self.initial_gametime = 0
-        self.behaviour = "chase_ball"
+        self.behaviour = "chase_ball" #start chasing ball
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         # Keep our boost pad info updated with which pads are currently active
         self.boost_pad_tracker.update_boost_status(packet)
@@ -48,19 +48,19 @@ class WeeNanner(BaseAgent):
         car_velocity = Vec3(my_car.physics.velocity)
         ball_location = Vec3(packet.game_ball.physics.location)
         distance_to_ball = self.get_target_distance(car_location, ball_location, flat=False) - 92.75
-        distance_to_ball_flat = self.get_target_distance(car_location, ball_location, flat=True) - 92.75
         curr_gametime = int(packet.game_info.seconds_elapsed)
         map_centre = Vec3(0, 0 ,0)
-        target_location = self.get_behaviour(packet, self.behaviour, car_location, ball_location)
-
-
+        offside = Vec3.is_closer_to_goal_than(car_location, ball_location, 1)
+        target_location = self.get_behaviour(packet, self.behaviour, car_location, ball_location, my_goal)
+        kickoff = self.kickoff_check(packet)
         
         # Draw some things to help Debug
         self.renderer.draw_string_2d(50, 50, 1, 1,f'Player Co-ords:{car_location}', self.renderer.white())
         self.renderer.draw_string_2d(50, 70, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
         self.renderer.draw_string_2d(50,90, 1, 1, f'Dist. to ball: {distance_to_ball:.1f}', self.renderer.white())
         self.renderer.draw_string_2d(50,110, 1, 1, f'Behaviour: {self.behaviour}', self.renderer.white())
-        
+        #self.renderer.draw_string_2d(50,130, 1, 1, f'Ang_to_ball_True: {self.get_target_direction(car_location, ball_location, flat=True)}', self.renderer.white())
+
         #Draw line to target location and rect on target location
         self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
@@ -71,7 +71,7 @@ class WeeNanner(BaseAgent):
         
 
         controls = SimpleControllerState()
-        controls.steer = steer_toward_target(my_car, self.get_behaviour(packet, self.behaviour, car_location, ball_location))
+        controls.steer = steer_toward_target(my_car, self.get_behaviour(packet, self.behaviour, car_location, ball_location, my_goal))
         controls.throttle = 1.0
 
 
@@ -79,14 +79,13 @@ class WeeNanner(BaseAgent):
             controls.boost = True
 
         #INITIATE KICKOFF
-        if packet.game_info.is_round_active:
-            if packet.game_info.is_kickoff_pause:
-                controls.boost = True
-                if 550 < car_velocity.length() < 650:
-                    return self.begin_speed_flip(packet)
-                if distance_to_ball < 460:
-                    controls.boost = False
-                    return self.begin_front_flip(packet)
+        if kickoff == True:
+            controls.boost = True
+            if 550 < car_velocity.length() < 650:
+                return self.begin_speed_flip(packet)    
+            if distance_to_ball < 460:
+                controls.boost = False
+                return self.begin_front_flip(packet)
         
 
         #FRONT FLIP COOLDOWN TIMER 
@@ -95,6 +94,8 @@ class WeeNanner(BaseAgent):
                 if curr_gametime - self.initial_gametime >= 4 :
                     self.begin_front_flip(packet)
                     self.initial_gametime = curr_gametime
+
+        #do we need to powerslide to turn towards the ball
 
         #Figure out where the ball is going if we are far away
         elif distance_to_ball >= 1500:
@@ -105,15 +106,21 @@ class WeeNanner(BaseAgent):
         elif self.on_wall(car_location) == True:
             self.behaviour = "get_off_wall"
         
+        elif Vec3.is_closer_to_goal_than(car_location, ball_location, 1) == True:
+            self.behaviour = "defense"
+
         else:
             self.behaviour = "chase_ball"
+        #dont know how else to do a behaviour check in python 3.7 any better, in 3.10 there is a case match statement which would make this 100x quicker.
 
-        return controls #KEEP AT END OF GET_OUTPUT FUNCTION <-- DONT SHOUT AT ME ZEETO <-- SORRY MA WEE PAL
+
+        return controls #KEEP AT END OF GET_OUTPUT FUNCTION <-- DONT SHOUT AT ME ZEETO <-- SORRY MATE
 
     
-    def get_behaviour(self, packet, command, car_location, ball_location):
+    def get_behaviour(self, packet, command, car, ball, my_goal):
+        
         if command == "get_off_wall":
-            return Vec3(car_location[0], car_location[1], 0)
+            return Vec3(car[0], car[1], 0)
 
         elif command == "ball_in_future":
             ball_prediction = self.get_ball_prediction_struct()  # This can predict bounces, etc
@@ -125,12 +132,15 @@ class WeeNanner(BaseAgent):
                 return Vec3(ball_in_future.physics.location)
             else:
                 pass
-        
+    
+        elif command == "defense":
+            return Vec3(car[0], my_goal[1], car[2])
+
         elif command == "chase_ball":
-            return ball_location
+            return ball
         
         else:
-            return ball_location
+            return ball
 
 
     def get_target_distance(self, playerlocation, target, flat):
@@ -167,7 +177,12 @@ class WeeNanner(BaseAgent):
                 return False
         else:
             return False
-
+    def kickoff_check(self, packet):
+            if packet.game_info.is_round_active:
+                if packet.game_info.is_kickoff_pause:
+                    return True
+                else:
+                    return False
     def begin_front_flip(self, packet):
 
         # Send some quickchat just for fun

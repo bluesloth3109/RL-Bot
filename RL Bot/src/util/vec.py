@@ -94,5 +94,18 @@ class Vec3:
 
     def ang_to(self, ideal: 'Vec3') -> float:
         """Returns the angle to the ideal vector. Angle will be between 0 and pi."""
-        cos_ang = self.dot(ideal) / (self.length() * ideal.length())
+        cos_ang = self.dot(ideal) / (self.length() * ideal.length())      
         return math.acos(cos_ang)
+
+
+    
+    def fix_ang(ang: float) -> float:
+        """
+        Hey Danny! i made this because i hate the normal ang_to, its fucking shite :)
+        Transforms the given angle into the range -pi...pi
+        """
+        return ((ang + math.pi) % math.tau) - math.pi
+
+    def is_closer_to_goal_than(a, b, team_index):
+        """ Returns true if a is closer than b to goal owned by the given team, used for offside """
+        return (a.y < b.y, a.y > b.y)[team_index]
