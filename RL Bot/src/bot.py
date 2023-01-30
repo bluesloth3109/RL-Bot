@@ -20,6 +20,7 @@ class WeeNanner(BaseAgent):
         # Set up information about the boost pads now that the game is active and the info is available
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
         self.initial_gametime = 0
+        self.behaviour = "chase_ball"
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         # Keep our boost pad info updated with which pads are currently active
         self.boost_pad_tracker.update_boost_status(packet)
@@ -50,37 +51,27 @@ class WeeNanner(BaseAgent):
         distance_to_ball_flat = self.get_target_distance(car_location, ball_location, flat=True) - 92.75
         curr_gametime = int(packet.game_info.seconds_elapsed)
         map_centre = Vec3(0, 0 ,0)
+        target_location = self.get_behaviour(packet, self.behaviour, car_location, ball_location)
 
 
-        # By default we will chase the ball
-        target_location = ball_location
-        if car_location.dist(ball_location) > 1500:
-            # self.attack_from_far(packet)
-            # We're far away from the ball, let's try to lead it a little bit
-            ball_prediction = self.get_ball_prediction_struct()  # This can predict bounces, etc
-            ball_in_future = find_slice_at_time(ball_prediction, packet.game_info.seconds_elapsed + 2)
-
-            # ball_in_future might be None if we don't have an adequate ball prediction right now, like during
-            # replays, so check it to avoid errors.
-            if ball_in_future is not None:
-                target_location = Vec3(ball_in_future.physics.location)
-                self.renderer.draw_line_3d(ball_location, target_location, self.renderer.cyan())
         
-        # Draw some things to help understand what the bot is thinking
-        self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
+        # Draw some things to help Debug
         self.renderer.draw_string_2d(50, 50, 1, 1,f'Player Co-ords:{car_location}', self.renderer.white())
         self.renderer.draw_string_2d(50, 70, 1, 1, f'Speed: {car_velocity.length():.1f}', self.renderer.white())
         self.renderer.draw_string_2d(50,90, 1, 1, f'Dist. to ball: {distance_to_ball:.1f}', self.renderer.white())
+        self.renderer.draw_string_2d(50,110, 1, 1, f'Behaviour: {self.behaviour}', self.renderer.white())
+        
+        #Draw line to target location and rect on target location
+        self.renderer.draw_line_3d(car_location, target_location, self.renderer.white())
         self.renderer.draw_rect_3d(target_location, 8, 8, True, self.renderer.cyan(), centered=True)
 
+        #Draw Goal Locations
         self.renderer.draw_line_3d(car_location, foe_goal, self.renderer.orange())
         self.renderer.draw_line_3d(car_location, my_goal, self.renderer.blue())
         
-        if 750 < car_velocity.length() < 800:
-            return self.begin_front_flip(packet)
 
         controls = SimpleControllerState()
-        controls.steer = steer_toward_target(my_car, target_location)
+        controls.steer = steer_toward_target(my_car, self.get_behaviour(packet, self.behaviour, car_location, ball_location))
         controls.throttle = 1.0
 
 
@@ -97,24 +88,51 @@ class WeeNanner(BaseAgent):
                     controls.boost = False
                     return self.begin_front_flip(packet)
         
+
+        #FRONT FLIP COOLDOWN TIMER 
+        if car_location.dist(ball_location) <= 460 or 750 < car_velocity.length() < 800:
+            if car_location[2] < 18.50:   
+                if curr_gametime - self.initial_gametime >= 4 :
+                    self.begin_front_flip(packet)
+                    self.initial_gametime = curr_gametime
+
+        #Figure out where the ball is going if we are far away
+        elif distance_to_ball >= 1500:
+            # self.attack_from_far(packet)
+            self.behaviour = "ball_in_future"
+
         #check if on wall, needs fixed dosent change target location to the cnetre, keeps staying on wall
-        if self.on_wall(car_location) == True:
-            target_location = map_centre
-            print("onwall", curr_gametime)
+        elif self.on_wall(car_location) == True:
+            self.behaviour = "get_off_wall"
+        
         else:
-            target_location = ball_location
+            self.behaviour = "chase_ball"
 
-        #FRONT FLIP COOLDOWN TIMER
-        if car_location.dist(ball_location) <= 460:
-            if curr_gametime - self.initial_gametime >= 4 :
-               self.begin_front_flip(packet)
-               self.initial_gametime = curr_gametime
+        return controls #KEEP AT END OF GET_OUTPUT FUNCTION <-- DONT SHOUT AT ME ZEETO <-- SORRY MA WEE PAL
 
+    
+    def get_behaviour(self, packet, command, car_location, ball_location):
+        if command == "get_off_wall":
+            return Vec3(car_location[0], car_location[1], 0)
 
+        elif command == "ball_in_future":
+            ball_prediction = self.get_ball_prediction_struct()  # This can predict bounces, etc
+            ball_in_future = find_slice_at_time(ball_prediction, packet.game_info.seconds_elapsed + 1)
+
+            # ball_in_future might be None if we don't have an adequate ball prediction right now, like during
+            # replays, so check it to avoid errors.
+            if ball_in_future is not None:
+                return Vec3(ball_in_future.physics.location)
+            else:
+                pass
         
-        return controls #KEEP AT END OF GET_OUTPUT FUNCTION <-- DONT SHOUT AT ME ZEETO
-    	
+        elif command == "chase_ball":
+            return ball_location
         
+        else:
+            return ball_location
+
+
     def get_target_distance(self, playerlocation, target, flat):
         #Returns distance from player to target as a vector, can be a flat 2d vector
             distance = Vec3.dist(playerlocation, target)
@@ -138,7 +156,7 @@ class WeeNanner(BaseAgent):
     def on_wall(self, point):
     #determines if a point is on the wall
         point = Vec3(abs(point[0]),abs(point[1]),abs(point[2]))
-        if point[2] > 400:
+        if point[2] > 300:
             if point[0] > 3600 and 4000 > point[1]:
                 return True
             elif 900 < point[0] < 3000 and point[1] > 4900:
