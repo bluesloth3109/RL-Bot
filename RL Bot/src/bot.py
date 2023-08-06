@@ -6,7 +6,6 @@ from util.drive import steer_toward_target
 from util.sequence import Sequence, ControlStep
 from util.vec import Vec3
 from util.target_tracker import middle_of_goal, get_target_direction, get_target_distance
-from util.car_flips import begin_front_flip, begin_half_flip, begin_speed_flip
 from behaviours import set_behaviour
 
 class WeeNanner(BaseAgent):
@@ -46,7 +45,6 @@ class WeeNanner(BaseAgent):
         curr_gametime = int(packet.game_info.seconds_elapsed)
         map_centre = Vec3(0, 0 ,0)
         offside = Vec3.is_closer_to_goal_than(car_location, ball_location, 1)
-        target_location = set_behaviour(packet, self.behaviour, car_location, ball_location, my_goal, ball_prediction)
         kickoff = self.kickoff_check(packet)
         
         # Draw some things to help Debug
@@ -94,18 +92,25 @@ class WeeNanner(BaseAgent):
 
         #Figure out where the ball is going if we are far away
         elif distance_to_ball >= 1500:
-            # self.attack_from_far(packet)
-            self.behaviour = "ball_in_future"
+            self.behaviour = "track_ball_in_future"
+            ball_in_future = find_slice_at_time(ball_prediction, packet.game_info.seconds_elapsed + 1)
+            if ball_in_future is not None:
+                return Vec3(ball_in_future.physics.location)
+            else:
+                pass
 
         #check if on wall, needs fixed dosent change target location to the cnetre, keeps staying on wall
         elif self.on_wall(car_location) == True:
             self.behaviour = "get_off_wall"
+            target_location = Vec3(car_location[0], car_location[1], 0)
         
         elif Vec3.is_closer_to_goal_than(car_location, ball_location, 1) == True:
             self.behaviour = "defense"
+            target_location = Vec3(car[0], my_goal[1], car_location[2])
 
         else:
             self.behaviour = "chase_ball"
+            target_location = ball_location
         #dont know how else to do a behaviour check in python 3.7 any better, in 3.10 there is a case match statement which would make this 100x quicker.
 
 
